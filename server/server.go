@@ -48,38 +48,46 @@ func connectDatabase() *sql.DB {
 
 func handler(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
-	ctx, cancel := context.WithTimeout(ctx, 200*time.Millisecond)
+	ctx, cancel := context.WithTimeout(ctx, 2000*time.Millisecond)
 	defer cancel()
 
 	req, err := http.NewRequestWithContext(ctx, "GET", "https://economia.awesomeapi.com.br/json/last/USD-BRL", nil)
-	if err != nil {
+	select {
+	case <-ctx.Done():
 		panic(err)
-	}
+	default:
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			panic(err)
+		}
+		defer resp.Body.Close()
 
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		panic(err)
-	}
-	defer resp.Body.Close()
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			panic(err)
+		}
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		panic(err)
-	}
+		var quotation JSONResponse
+		err = json.Unmarshal(body, &quotation)
+		if err != nil {
+			panic(err)
+		}
 
-	var quotation JSONResponse
-	err = json.Unmarshal(body, &quotation)
-	if err != nil {
-		panic(err)
+		saveToDatabase(ctx, &quotation, w)
 	}
+}
 
+func saveToDatabase(ctx context.Context, quotation *JSONResponse, w http.ResponseWriter) {
 	db := connectDatabase()
-	ctx, cancel = context.WithTimeout(ctx, 10*time.Millisecond)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Nanosecond)
 	defer cancel()
-	_, err = db.ExecContext(ctx, "INSERT INTO quotations VALUES (NULL, ?, ?);", time.Now(), quotation.Data.Value)
-	if err != nil {
+	_, err := db.ExecContext(ctx, "INSERT INTO quotations VALUES (NULL, ?, ?);", time.Now(), quotation.Data.Value)
+
+	select {
+	case <-ctx.Done():
 		panic(err)
+	default:
+		json.NewEncoder(w).Encode(quotation.Data.Value)
 	}
 
-	json.NewEncoder(w).Encode(quotation.Data.Value)
 }
