@@ -79,7 +79,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 func saveToDatabase(ctx context.Context, quotation *JSONResponse, w http.ResponseWriter) {
 	db := connectDatabase()
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Nanosecond)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Millisecond)
 	defer cancel()
 	_, err := db.ExecContext(ctx, "INSERT INTO quotations VALUES (NULL, ?, ?);", time.Now(), quotation.Data.Value)
 
