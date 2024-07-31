@@ -48,7 +48,7 @@ func connectDatabase() *sql.DB {
 
 func handler(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
-	ctx, cancel := context.WithTimeout(ctx, 2000*time.Millisecond)
+	ctx, cancel := context.WithTimeout(ctx, 200*time.Millisecond)
 	defer cancel()
 
 	req, err := http.NewRequestWithContext(ctx, "GET", "https://economia.awesomeapi.com.br/json/last/USD-BRL", nil)
